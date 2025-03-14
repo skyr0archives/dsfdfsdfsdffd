@@ -1,0 +1,1127 @@
+#pragma once
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_dx9.h"
+#include "imgui/imgui_impl_win32.h"
+#include <dwmapi.h>
+#include <d3d9.h>
+#include <string.h>
+#include <string>
+#include <xstring>
+#include <sstream>
+#include <algorithm>
+#include <list>
+#include <iostream>
+#include <tlhelp32.h>
+#include <fstream>
+#include <filesystem>
+#include <Windows.h>
+#include <winioctl.h>
+#include <lmcons.h>
+#include <random>
+#include "fontSF.h"
+#pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "dwmapi.lib")
+IDirect3D9Ex* p_object = NULL;
+IDirect3DDevice9Ex* p_device = NULL;
+D3DPRESENT_PARAMETERS p_params = { NULL };
+MSG messager = { NULL };
+HWND my_wnd = NULL;
+HWND game_wnd = NULL;
+DWORD processID;
+
+static ImVec2 radarSize = { 200, 200 };
+static ImVec2 radarPos = { 10, 35 };
+static int RedDotSize = 3;
+ImFont* FontTitle = nullptr;
+ImFont* FontTabs = nullptr;
+ImFont* FontNormal = nullptr;
+ImFont* FontDraw = nullptr;
+
+HRESULT directx_init()
+{	
+	if (FAILED(Direct3DCreate9Ex(D3D_SDK_VERSION, &p_object))) exit(3);
+	ZeroMemory(&p_params, sizeof(p_params));
+	p_params.Windowed = TRUE;
+	p_params.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	p_params.hDeviceWindow = my_wnd;
+	p_params.MultiSampleQuality = D3DMULTISAMPLE_NONE;
+	p_params.BackBufferFormat = D3DFMT_A8R8G8B8;
+	p_params.BackBufferWidth = settings::width;
+	p_params.BackBufferHeight = settings::height;
+	p_params.EnableAutoDepthStencil = TRUE;
+	p_params.AutoDepthStencilFormat = D3DFMT_D16;
+	p_params.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+	if (FAILED(p_object->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, my_wnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &p_params, 0, &p_device)))
+	{
+		p_object->Release();
+		exit(4);
+	}
+	ImGui::CreateContext();
+	ImGui_ImplWin32_Init(my_wnd);
+	ImGui_ImplDX9_Init(p_device);
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+		ImGuiStyle* style = &ImGui::GetStyle();
+
+	ImGui::StyleColorsClassic();
+
+	style->WindowPadding = ImVec2(15, 15);
+	style->WindowRounding = 5.0f;
+	style->FramePadding = ImVec2(5, 5);
+	style->FrameRounding = 4.0f;
+	style->ItemSpacing = ImVec2(12, 8);
+	style->ItemInnerSpacing = ImVec2(8, 6);
+	style->IndentSpacing = 25.0f;
+	style->ScrollbarSize = 15.0f;
+	style->ScrollbarRounding = 9.0f;
+	style->GrabMinSize = 5.0f;
+	style->GrabRounding = 3.0f;
+
+	ImVec4* colors = style->Colors;
+
+	colors[ImGuiCol_Text] = ImVec4(0.92f, 0.92f, 0.92f, 1.00f);
+	colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_WindowBg] = ImVec4(0.26f, 0.26f, 0.26f, 0.95f);
+	colors[ImGuiCol_ChildWindowBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+	colors[ImGuiCol_PopupBg] = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+	colors[ImGuiCol_Border] = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+	colors[ImGuiCol_BorderShadow] = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
+	colors[ImGuiCol_FrameBg] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_FrameBgActive] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_TitleBg] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_TitleBgActive] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_MenuBarBg] = ImVec4(0.92f, 0.92f, 0.92f, 1.00f);
+	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.21f, 0.21f, 0.21f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_CheckMark] = ImVec4(36.00f, 252.00f, 3.00f, 1.00f);
+	colors[ImGuiCol_SliderGrab] = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
+	colors[ImGuiCol_SliderGrabActive] = ImVec4(0.74f, 0.74f, 0.74f, 1.00f);
+	colors[ImGuiCol_Button] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_ButtonHovered] = ImVec4(0.43f, 0.43f, 0.43f, 1.00f);
+	colors[ImGuiCol_ButtonActive] = ImVec4(0.11f, 0.11f, 0.11f, 1.00f);
+	colors[ImGuiCol_Header] = ImVec4(0.9f, 0.5f, 0.0f, 1.00f);
+	colors[ImGuiCol_HeaderHovered] = ImVec4(0.9f, 0.5f, 0.0f, 1.00f);
+	colors[ImGuiCol_HeaderActive] = ImVec4(0.9f, 0.5f, 0.0f, 1.00f);
+	colors[ImGuiCol_Column] = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+	colors[ImGuiCol_ColumnHovered] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_ColumnActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_ResizeGrip] = ImVec4(0.36f, 0.36f, 0.36f, 1.00f);
+	colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_PlotLines] = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+	colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+	colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	colors[ImGuiCol_TextSelectedBg] = ImVec4(0.32f, 0.52f, 0.65f, 1.00f);
+	colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
+
+
+	style->WindowTitleAlign.x = 1.0f;
+	style->FrameRounding = 0.5f;
+
+	ImGui::GetIO().Fonts->AddFontFromMemoryTTF(SF_Font, SF_Font_Size, 18.0f);
+	p_object->Release();
+	return S_OK;
+}
+
+void create_overlay()
+{
+	WNDCLASSEXA wcex = {
+	sizeof(WNDCLASSEXA),
+	0,
+	DefWindowProcA,
+	0,
+	0,
+	0,
+	LoadIcon(0, IDI_APPLICATION),
+	LoadCursor(0, IDC_ARROW),
+	0,
+	0,
+	"1337",
+	LoadIcon(0, IDI_APPLICATION)
+	};
+	ATOM rce = RegisterClassExA(&wcex);
+	RECT rect;
+	GetWindowRect(GetDesktopWindow(), &rect);
+	my_wnd = gui::create_window_in_band(0, rce, L"1337", WS_POPUP, rect.left, rect.top, rect.right, rect.bottom, 0, 0, wcex.hInstance, 0, gui::ZBID_UIACCESS);
+	SetWindowLong(my_wnd, GWL_EXSTYLE, WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
+	SetLayeredWindowAttributes(my_wnd, RGB(0, 0, 0), 255, LWA_ALPHA);
+	MARGINS margin = { -1 };
+	DwmExtendFrameIntoClientArea(my_wnd, &margin);
+	ShowWindow(my_wnd, SW_SHOW);
+	UpdateWindow(my_wnd);
+}
+
+
+std::string UTF8(const std::string& str)
+{
+	int nwLen = ::MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
+	wchar_t* pwBuf = new wchar_t[nwLen + 1];
+	ZeroMemory(pwBuf, nwLen * 2 + 2);
+	::MultiByteToWideChar(CP_ACP, 0, str.c_str(), str.length(), pwBuf, nwLen);
+	int nLen = ::WideCharToMultiByte(CP_UTF8, 0, pwBuf, -1, NULL, NULL, NULL, NULL);
+	char* pBuf = new char[nLen + 1];
+	ZeroMemory(pBuf, nLen + 1);
+	::WideCharToMultiByte(CP_UTF8, 0, pwBuf, nwLen, pBuf, nLen, NULL, NULL);
+	std::string retStr(pBuf);
+	delete[]pwBuf;
+	delete[]pBuf;
+	pwBuf = NULL;
+	pBuf = NULL;
+	return retStr;
+}
+
+void ShadowRGBText(int x, int y, ImColor color, const char* str)
+{
+	ImFont a;
+	std::string utf_8_1 = std::string(str);
+	std::string utf_8_2 = UTF8(utf_8_1);
+	ImGui::GetOverlayDrawList()->AddText(ImVec2(x + 1, y + 1), ImGui::ColorConvertFloat4ToU32(ImColor(0, 0, 0, 200)), utf_8_2.c_str());
+	ImGui::GetOverlayDrawList()->AddText(ImVec2(x + 1, y + 1), ImGui::ColorConvertFloat4ToU32(ImColor(0, 0, 0, 200)), utf_8_2.c_str());
+	ImGui::GetOverlayDrawList()->AddText(ImVec2(x, y), ImGui::ColorConvertFloat4ToU32(ImVec4(color)), utf_8_2.c_str());
+}
+
+
+void ToggleButton(const char* str_id, bool* v)
+{
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	float height = ImGui::GetFrameHeight();
+	float width = height * 1.44f;
+	float radius = height * 0.50f;
+
+	ImGui::InvisibleButton(str_id, ImVec2(width, height));
+	if (ImGui::IsItemClicked())
+		*v = !*v;
+
+	float t = *v ? 1.0f : 0.0f;
+
+	ImU32 col_bg;
+
+
+	draw_list->AddRectFilled(p, ImVec2(p.x + width, p.y + height), col_bg, height * 0.5f);
+	draw_list->AddCircleFilled(ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius), radius - 1.5f, IM_COL32(255, 255, 255, 255));
+}
+
+
+float DrawOutlinedText(ImFont* pFont, const std::string& text, const ImVec2& pos, float size, ImU32 color, bool center)
+{
+	std::stringstream stream(text);
+	std::string line;
+
+	float y = 0.0f;
+	int i = 0;
+
+	while (std::getline(stream, line))
+	{
+		ImVec2 textSize = pFont->CalcTextSizeA(size, FLT_MAX, 0.0f, line.c_str());
+
+		if (center)
+		{
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x - textSize.x / 2.0f) + 1, (pos.y + textSize.y * i) + 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x - textSize.x / 2.0f) - 1, (pos.y + textSize.y * i) - 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x - textSize.x / 2.0f) + 1, (pos.y + textSize.y * i) - 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x - textSize.x / 2.0f) - 1, (pos.y + textSize.y * i) + 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2(pos.x - textSize.x / 2.0f, pos.y + textSize.y * i), ImGui::GetColorU32(color), line.c_str());
+		}
+		else
+		{
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x) + 1, (pos.y + textSize.y * i) + 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x) - 1, (pos.y + textSize.y * i) - 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x) + 1, (pos.y + textSize.y * i) - 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2((pos.x) - 1, (pos.y + textSize.y * i) + 1), ImGui::GetColorU32(ImVec4(0, 0, 0, 255)), line.c_str());
+
+			ImGui::GetOverlayDrawList()->AddText(pFont, size, ImVec2(pos.x, pos.y + textSize.y * i), ImGui::GetColorU32(color), line.c_str());
+		}
+
+		y = pos.y + textSize.y * (i + 1);
+		i++;
+	}
+	return y;
+}
+
+double GetCrossDistance(double x1, double y1, double z1, double x2, double y2, double z2) {
+	return sqrt(pow((x2 - x1), 2) + pow((y2 - y1), 2));
+}
+
+void DrawCrosshair(ImVec2 center, ImVec4 color, float size) {
+	ImGui::GetOverlayDrawList()->AddLine(
+		ImVec2(center.x - size, center.y), ImVec2(center.x + size, center.y),
+		ImGui::ColorConvertFloat4ToU32(color), 1.0f // Lower thickness
+	);
+	ImGui::GetOverlayDrawList()->AddLine(
+		ImVec2(center.x, center.y - size), ImVec2(center.x, center.y + size),
+		ImGui::ColorConvertFloat4ToU32(color), 1.0f // Lower thickness
+	);
+}
+
+void aimbot(uintptr_t target_mesh)
+{
+	if (settings::aimbot::visible_check)
+	{
+		if (!target_mesh || !is_visible(target_mesh)) // Clarified visibility check condition
+			return;
+	}
+	else
+	{
+
+	}
+	Vector3 head3d = get_entity_bone(target_mesh, 110);
+	Vector2 head2d = project_world_to_screen(head3d);
+	Vector2 target{};
+	if (head2d.x != 0)
+	{
+		if (head2d.x > settings::screen_center_x)
+		{
+			target.x = -(settings::screen_center_x - head2d.x);
+			target.x /= settings::aimbot::smoothness;
+			if (target.x + settings::screen_center_x > settings::screen_center_x * 2) target.x = 0;
+		}
+		if (head2d.x < settings::screen_center_x)
+		{
+			target.x = head2d.x - settings::screen_center_x;
+			target.x /= settings::aimbot::smoothness;
+			if (target.x + settings::screen_center_x < 0) target.x = 0;
+		}
+	}
+	if (head2d.y != 0)
+	{
+		if (head2d.y > settings::screen_center_y)
+		{
+			target.y = -(settings::screen_center_y - head2d.y);
+			target.y /= settings::aimbot::smoothness;
+			if (target.y + settings::screen_center_y > settings::screen_center_y * 2) target.y = 0;
+		}
+		if (head2d.y < settings::screen_center_y)
+		{
+			target.y = head2d.y - settings::screen_center_y;
+			target.y /= settings::aimbot::smoothness;
+			if (target.y + settings::screen_center_y < 0) target.y = 0;
+		}
+	}
+	input::move_mouse(target.x, target.y);
+}
+
+void DrawCornerBox(int X, int Y, int W, int H, const ImU32& color, int thickness) {
+	float lineW = (W / 3);
+	float lineH = (H / 3);
+
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X, Y), ImVec2(X, Y + lineH), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X, Y), ImVec2(X + lineW, Y), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X + W - lineW, Y), ImVec2(X + W, Y), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X + W, Y), ImVec2(X + W, Y + lineH), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X, Y + H - lineH), ImVec2(X, Y + H), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X, Y + H), ImVec2(X + lineW, Y + H), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X + W - lineW, Y + H), ImVec2(X + W, Y + H), ImGui::GetColorU32(color), thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(X + W, Y + H - lineH), ImVec2(X + W, Y + H), ImGui::GetColorU32(color), thickness);
+}
+
+
+
+void Box(int X, int Y, int W, int H, const ImColor color, int thickness)
+{
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2{ (float)X, (float)Y }, ImVec2{ (float)(X + W), (float)Y }, color, thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2{ (float)(X + W), (float)Y }, ImVec2{ (float)(X + W), (float)(Y + H) }, color, thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2{ (float)X, (float)(Y + H) }, ImVec2{ (float)(X + W), (float)(Y + H) }, color, thickness);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2{ (float)X, (float)Y }, ImVec2{ (float)X, (float)(Y + H) }, color, thickness);
+}
+
+void draw_filled_rect(int x, int y, int w, int h, const ImColor color)
+{
+	ImGui::GetOverlayDrawList()->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), color, 0, 0);
+}
+
+void draw_line(Vector2 target, const ImColor color)
+{
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(settings::screen_center_x, settings::height), ImVec2(target.x, target.y), color, 0.1f);
+}
+void draw_distance(Vector2 location, float distance, const ImColor color)
+{
+	char dist[64];
+	sprintf_s(dist, "%.fm", distance);
+	ImVec2 text_size = ImGui::CalcTextSize(dist);
+	ImGui::GetOverlayDrawList()->AddText(ImVec2(location.x - text_size.x / 2, location.y - text_size.y / 2), color, dist);
+}
+
+void Active() {
+	ImGuiStyle* Style = &ImGui::GetStyle();
+	Style->Colors[ImGuiCol_Button] = ImColor(55, 55, 55);
+	Style->Colors[ImGuiCol_ButtonActive] = ImColor(55, 55, 55);
+	Style->Colors[ImGuiCol_ButtonHovered] = ImColor(0, 0, 0);
+}
+void Hovered() {
+	ImGuiStyle* Style = &ImGui::GetStyle();
+	Style->Colors[ImGuiCol_Button] = ImColor(0, 0, 0);
+	Style->Colors[ImGuiCol_ButtonActive] = ImColor(0, 0, 0);
+	Style->Colors[ImGuiCol_ButtonHovered] = ImColor(55, 55, 55);
+}
+
+void Active1() {
+	ImGuiStyle* Style = &ImGui::GetStyle();
+	Style->Colors[ImGuiCol_Button] = ImColor(0, 55, 0);
+	Style->Colors[ImGuiCol_ButtonActive] = ImColor(0, 55, 0);
+	Style->Colors[ImGuiCol_ButtonHovered] = ImColor(55, 0, 0);
+}
+void Hovered1() {
+	ImGuiStyle* Style = &ImGui::GetStyle();
+	Style->Colors[ImGuiCol_Button] = ImColor(55, 0, 0);
+	Style->Colors[ImGuiCol_ButtonActive] = ImColor(55, 0, 0);
+	Style->Colors[ImGuiCol_ButtonHovered] = ImColor(0, 55, 0);
+}
+
+
+
+void radar_range(float* x, float* y, float range)
+{
+	if (fabs((*x)) > range || fabs((*y)) > range)
+	{
+		if ((*y) > (*x))
+		{
+			if ((*y) > -(*x))
+			{
+				(*x) = range * (*x) / (*y);
+				(*y) = range;
+			}
+			else
+			{
+				(*y) = -range * (*y) / (*x);
+				(*x) = -range;
+			}
+		}
+		else
+		{
+			if ((*y) > -(*x))
+			{
+				(*y) = range * (*y) / (*x);
+				(*x) = range;
+			}
+			else
+			{
+				(*x) = -range * (*x) / (*y);
+				(*y) = -range;
+			}
+		}
+	}
+}
+
+void project_world_to_radar(Vector3 vOrigin, int& screenx, int& screeny, ImVec2 pos)
+{
+	Vector3 vAngle = cache::local_camera.rotation;
+	auto fYaw = vAngle.y * M_PI / 180.0f;
+	float dx = vOrigin.x - cache::local_camera.location.x;
+	float dy = vOrigin.y - cache::local_camera.location.y;
+	float fsin_yaw = sinf(fYaw);
+	float fminus_cos_yaw = -cosf(fYaw);
+	float x = dy * fminus_cos_yaw + dx * fsin_yaw;
+	x = -x;
+	float y = dx * fminus_cos_yaw - dy * fsin_yaw;
+	float range = (float)(settings::radar::range / 5) * 1000.f;
+
+	radar_range(&x, &y, range);
+
+	ImVec2 DrawPos = ImVec2(pos.x, pos.y);
+	ImVec2 DrawSize = ImVec2(200.0f, 200.0f);
+	float radarRadius = 200.0f / 2;
+	float distance = sqrt(pow(screenx - DrawPos.x, 2) + pow(screeny - DrawPos.y, 2));
+
+	if (distance > radarRadius)
+	{
+		float angle = atan2(screeny - DrawPos.y, screenx - DrawPos.x);
+		screenx = static_cast<int>(DrawPos.x + radarRadius * cos(angle));
+		screeny = static_cast<int>(DrawPos.y + radarRadius * sin(angle));
+	}
+
+	int rad_x = (int)DrawPos.x;
+	int rad_y = (int)DrawPos.y;
+	float r_siz_x = DrawSize.x;
+	float r_siz_y = DrawSize.y;
+	int x_max = (int)r_siz_x + rad_x - 5;
+	int y_max = (int)r_siz_y + rad_y - 5;
+
+	screenx = rad_x + ((int)r_siz_x / 2 + int(x / range * r_siz_x));
+	screeny = rad_y + ((int)r_siz_y / 2 + int(y / range * r_siz_y));
+
+	if (screenx > x_max)
+		screenx = x_max;
+
+	if (screenx < rad_x)
+		screenx = rad_x;
+
+	if (screeny > y_max)
+		screeny = y_max;
+
+	if (screeny < rad_y)
+		screeny = rad_y;
+}
+
+
+void Radar()
+{
+	if (settings::radar::radar)
+	{
+		radarPos.x = 30;
+		radarPos.y = (ImGui::GetIO().DisplaySize.y / 4) - (radarSize.y / 2) + 180;
+		ImGui::SetNextWindowSize(radarSize);
+		ImGui::SetNextWindowPos(radarPos);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(10, 10, 10, 155));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		ImGui::Begin("##Radar", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
+		{
+			ImVec2 winpos = radarPos;
+			ImVec2 winsize = radarSize;
+			if (settings::radar::cross)
+			{
+				ImGui::GetWindowDrawList()->AddLine(ImVec2(winpos.x + winsize.x * 0.5f, winpos.y), ImVec2(winpos.x + winsize.x * 0.5f, winpos.y + winsize.y), ImGui::GetColorU32(ImGuiCol_Border), 1.0f);
+				ImGui::GetWindowDrawList()->AddLine(ImVec2(winpos.x, winpos.y + winsize.y * 0.5f), ImVec2(winpos.x + winsize.x, winpos.y + winsize.y * 0.5f), ImGui::GetColorU32(ImGuiCol_Border), 1.0f);
+			}
+
+			if (settings::radar::local_player)
+			{
+
+				ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(winpos.x + winsize.x * 0.5f, winpos.y + winsize.y * 0.5f), 2.0f, ImColor(255, 255, 255, 255), 64);
+			}
+			ImColor esp_col = ImColor(255, 0, 0, 255);
+			float dotsize = RedDotSize;
+			if (dotsize < 1.0f) dotsize = 1.0f;
+			if (dotsize > 10.0f) dotsize = 10.0f;
+			int ScreenX, ScreenY = 0;
+			for (int i = 0; i < cache::player_count; ++i)
+			{
+				uintptr_t player_state = read<uintptr_t>(cache::player_array + (i * sizeof(uintptr_t)));
+				int player_team_id = read<int>(player_state + TEAM_INDEX);
+				if (player_team_id == cache::my_team_id) continue;
+
+				uintptr_t pawn_private = read<uintptr_t>(player_state + PAWN_PRIVATE);
+				if (!pawn_private || pawn_private == cache::local_pawn) continue;
+
+				uintptr_t mesh = read<uintptr_t>(pawn_private + MESH);
+				if (!mesh) continue;
+
+				Vector3 bottom3d = get_entity_bone(mesh, 0);
+				Vector2 bottom2d = project_world_to_screen(bottom3d);
+
+				project_world_to_radar(bottom3d, ScreenX, ScreenY, winpos);
+
+				if (ScreenX < winpos.x) ScreenX = static_cast<int>(winpos.x);
+				if (ScreenX > winpos.x + winsize.x) ScreenX = static_cast<int>(winpos.x + winsize.x);
+				if (ScreenY < winpos.y) ScreenY = static_cast<int>(winpos.y);
+				if (ScreenY > winpos.y + winsize.y) ScreenY = static_cast<int>(winpos.y + winsize.y);
+
+				ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(ScreenX, ScreenY), dotsize, esp_col, 64);
+			}
+		}
+
+
+	}
+
+	ImGui::End();
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
+}
+
+void DrawSkeleton(DWORD_PTR mesh)
+{
+	Vector3 vHeadBone = get_entity_bone(mesh, 67);
+	Vector3 vHip = get_entity_bone(mesh, 2);
+	Vector3 vNeck = get_entity_bone(mesh, 66);
+	Vector3 vUpperArmLeft = get_entity_bone(mesh, 9);
+	Vector3 vUpperArmRight = get_entity_bone(mesh, 38);
+	Vector3 vLeftHand = get_entity_bone(mesh, 10);
+	Vector3 vRightHand = get_entity_bone(mesh, 39);
+	Vector3 vLeftHand1 = get_entity_bone(mesh, 11);
+	Vector3 vRightHand1 = get_entity_bone(mesh, 40);
+	Vector3 vRightThigh = get_entity_bone(mesh, 78);
+	Vector3 vLeftThigh = get_entity_bone(mesh, 71);
+	Vector3 vRightCalf = get_entity_bone(mesh, 79);
+	Vector3 vLeftCalf = get_entity_bone(mesh, 72);
+	Vector3 vLeftFoot = get_entity_bone(mesh, 75);
+	Vector3 vRightFoot = get_entity_bone(mesh, 82);
+	Vector2 vHeadBoneOut = project_world_to_screen(vHeadBone);
+	Vector2 vHipOut = project_world_to_screen(vHip);
+	Vector2 vNeckOut = project_world_to_screen(vNeck);
+	Vector2 vUpperArmLeftOut = project_world_to_screen(vUpperArmLeft);
+	Vector2 vUpperArmRightOut = project_world_to_screen(vUpperArmRight);
+	Vector2 vLeftHandOut = project_world_to_screen(vLeftHand);
+	Vector2 vRightHandOut = project_world_to_screen(vRightHand);
+	Vector2 vLeftHandOut1 = project_world_to_screen(vLeftHand1);
+	Vector2 vRightHandOut1 = project_world_to_screen(vRightHand1);
+	Vector2 vRightThighOut = project_world_to_screen(vRightThigh);
+	Vector2 vLeftThighOut = project_world_to_screen(vLeftThigh);
+	Vector2 vRightCalfOut = project_world_to_screen(vRightCalf);
+	Vector2 vLeftCalfOut = project_world_to_screen(vLeftCalf);
+	Vector2 vLeftFootOut = project_world_to_screen(vLeftFoot);
+	Vector2 vRightFootOut = project_world_to_screen(vRightFoot);
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vHipOut.x, vHipOut.y), ImVec2(vNeckOut.x, vNeckOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vUpperArmLeftOut.x, vUpperArmLeftOut.y), ImVec2(vNeckOut.x, vNeckOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vUpperArmRightOut.x, vUpperArmRightOut.y), ImVec2(vNeckOut.x, vNeckOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vLeftHandOut.x, vLeftHandOut.y), ImVec2(vUpperArmLeftOut.x, vUpperArmLeftOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vRightHandOut.x, vRightHandOut.y), ImVec2(vUpperArmRightOut.x, vUpperArmRightOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vLeftHandOut.x, vLeftHandOut.y), ImVec2(vLeftHandOut1.x, vLeftHandOut1.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vRightHandOut.x, vRightHandOut.y), ImVec2(vRightHandOut1.x, vRightHandOut1.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vLeftThighOut.x, vLeftThighOut.y), ImVec2(vHipOut.x, vHipOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vRightThighOut.x, vRightThighOut.y), ImVec2(vHipOut.x, vHipOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vLeftCalfOut.x, vLeftCalfOut.y), ImVec2(vLeftThighOut.x, vLeftThighOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vRightCalfOut.x, vRightCalfOut.y), ImVec2(vRightThighOut.x, vRightThighOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vLeftFootOut.x, vLeftFootOut.y), ImVec2(vLeftCalfOut.x, vLeftCalfOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+	ImGui::GetOverlayDrawList()->AddLine(ImVec2(vRightFootOut.x, vRightFootOut.y), ImVec2(vRightCalfOut.x, vRightCalfOut.y), ImGui::GetColorU32({ settings::Skeletonchik[0], settings::Skeletonchik[1], settings::Skeletonchik[2], 1.0f }));
+}
+
+#include <chrono>
+#include "Keybinds.h"
+
+using namespace std::chrono;
+
+void Debugg()
+{
+	//fuck ts i hate it
+}
+
+ImVec2 GetWatermarkSize()
+{
+	ImVec2 position = ImVec2(30, 30);
+	const char* text = "Skyr0.v3";
+
+	ImVec2 textSize = ImGui::CalcTextSize(text);
+	return ImVec2(position.x, position.y + textSize.y);
+}
+
+
+
+void game_loop()
+{
+	cache::uworld = read<uintptr_t>(sofmainisud + UWORLD);
+	cache::game_instance = read<uintptr_t>(cache::uworld + GAME_INSTANCE);
+	cache::local_players = read<uintptr_t>(read<uintptr_t>(cache::game_instance + LOCAL_PLAYERS));
+	cache::player_controller = read<uintptr_t>(cache::local_players + PLAYER_CONTROLLER);
+	cache::local_pawn = read<uintptr_t>(cache::player_controller + LOCAL_PAWN);
+	if (cache::local_pawn != 0)
+	{
+		cache::root_component = read<uintptr_t>(cache::local_pawn + ROOT_COMPONENT);
+		cache::relative_location = read<Vector3>(cache::root_component + RELATIVE_LOCATION);
+		cache::player_state = read<uintptr_t>(cache::local_pawn + PLAYER_STATE);
+		cache::my_team_id = read<int>(cache::player_state + TEAM_INDEX);
+	}
+	cache::game_state = read<uintptr_t>(cache::uworld + GAME_STATE);
+	cache::player_array = read<uintptr_t>(cache::game_state + PLAYER_ARRAY);
+	cache::player_count = read<int>(cache::game_state + (PLAYER_ARRAY + sizeof(uintptr_t)));
+	cache::closest_distance = FLT_MAX;
+	cache::closest_mesh = NULL;
+	for (int i = 0; i < cache::player_count; i++)
+	{
+		uintptr_t player_state = read<uintptr_t>(cache::player_array + (i * sizeof(uintptr_t)));
+		if (!player_state) continue;
+		int player_team_id = read<int>(player_state + TEAM_INDEX);
+		if (player_team_id == cache::my_team_id) continue;
+		uintptr_t pawn_private = read<uintptr_t>(player_state + PAWN_PRIVATE);
+		if (!pawn_private) continue;
+		if (pawn_private == cache::local_pawn) continue;
+		uintptr_t mesh = read<uintptr_t>(pawn_private + MESH);
+		if (!mesh) continue;
+		Vector3 head3d = get_entity_bone(mesh, 110);
+		Vector2 head2d = project_world_to_screen(head3d);
+		Vector3 bottom3d = get_entity_bone(mesh, 0);
+		Vector2 bottom2d = project_world_to_screen(bottom3d);
+		Vector3 bone66 = get_entity_bone(mesh, 66);
+		Vector3 aimbone = get_entity_bone(mesh, 66);
+		Vector3 bone0 = get_entity_bone(mesh, 0);
+
+		Vector2 top = project_world_to_screen(bone66);
+		Vector2 chest = project_world_to_screen(bone66);
+		Vector2 aimbotspot = project_world_to_screen(aimbone);
+		Vector2 bottom = project_world_to_screen(bone0);
+		Vector2 Head = project_world_to_screen(Vector3(bone66.x, bone66.y, bone66.z + 15));
+		float box_height = abs(head2d.y - bottom2d.y);
+		float box_width = box_height * 0.50f;
+		float BoxHeight = (float)(Head.y - bottom.y);
+		float BoxWidth = BoxHeight * 1.46;
+		float CornerHeight = abs(Head.y - bottom.y);
+		float CornerWidth = BoxHeight * 0.46;
+		float distance = cache::relative_location.distance(bottom3d) / 100;
+		if (settings::visuals::enable)
+		{
+			if (settings::visuals::Box)
+			{
+				if (is_visible(mesh))
+				{
+					Box(head2d.x - (box_width / 2), head2d.y, box_width, box_height, ImColor(250, 250, 250, 250), 1);
+				}
+				else
+				{
+					Box(head2d.x - (box_width / 2), head2d.y, box_width, box_height, ImColor(250, 0, 0, 250), 1);
+				}
+				if (settings::visuals::fill_box) draw_filled_rect(head2d.x - (box_width / 2), head2d.y, box_width, box_height, ImColor(0, 0, 0, 50));
+			}
+
+			if (settings::radar::radar)
+			{
+				Radar();
+			}
+		
+
+			if (settings::Features::crosshair)
+			{
+				ImVec2 center = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+				ImVec4 color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // Red color
+				float size = 12.0f;
+				DrawCrosshair(center, color, size);
+			}
+
+		if (settings::Esp_Corner_Box) {
+			//DrawCornerBoxFill(Head.x - (CornerWidth / 2), Head.y, CornerWidth, CornerHeight, ImGui::GetColorU32({ Settings::BoxCornerESP[0], Settings::BoxCornerESP[1], Settings::BoxCornerESP[2], 1.0f }), Settings::Thickness && Settings::opacity);
+			DrawCornerBox(Head.x - (CornerWidth / 2), Head.y, CornerWidth, CornerHeight, ImGui::GetColorU32({ settings::visuals::BoxCornerESP[0],  settings::visuals::BoxCornerESP[1],  settings::visuals::BoxCornerESP[2], 1.0f }), settings::visuals::Thickness);
+		}
+		if (settings::Esp_skeleton) {
+			DrawSkeleton(mesh);
+		}
+
+			if (settings::visuals::line)
+			{
+				if (is_visible(mesh))
+				{
+					draw_line(bottom2d, ImColor(255, 0, 0, 255));
+				}
+				else
+				{
+					draw_line(bottom2d, ImColor(255, 255, 255, 255));
+				}
+			}
+			if (settings::visuals::distance)
+			{
+				draw_distance(bottom2d, distance, ImColor(250, 250, 250, 250));
+			}
+		}
+		double dx = head2d.x - settings::screen_center_x;
+		double dy = head2d.y - settings::screen_center_y;
+		float dist = sqrtf(dx * dx + dy * dy);
+		if (dist <= settings::aimbot::fov && dist < cache::closest_distance)
+		{
+			cache::closest_distance = dist;
+			cache::closest_mesh = mesh;
+		}
+	}
+	if (settings::aimbot::enable)
+	{
+		if (GetAsyncKeyState(settings::aimbot::current_key)) aimbot(cache::closest_mesh);
+	}
+
+	if (settings::Features::Watermark) {
+
+		ImVec2 position = ImVec2(30, 30);
+		ImColor color = ImColor(0.63f, 0.13f, 0.94f, 1.f);
+		const char* text = "Skyr0.v3";
+
+		ImGui::GetOverlayDrawList()->AddText(position, color, text);
+
+
+	}
+	if (settings::Features::Debug) {
+
+
+		Debugg();
+
+	}
+}
+
+
+
+
+
+void render_menu()
+{
+	static int maintabs = 0;
+
+	if (settings::aimbot::show_fov)
+		ImGui::GetOverlayDrawList()->AddCircle(ImVec2(ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y / 2), settings::aimbot::fov, ImColor(250, 250, 250, 250), 100, 1.0f);
+
+	if (GetAsyncKeyState(VK_INSERT) & 1)
+		settings::show_menu = !settings::show_menu;
+
+	if (settings::show_menu)
+	{
+		ImGuiStyle* style = &ImGui::GetStyle();
+
+		// Adjust style
+		style->WindowPadding = ImVec2(15, 15);
+		style->WindowRounding = 5.0f;
+		style->FramePadding = ImVec2(4.5f, 2.5f);
+		style->FrameRounding = 2.5f;
+		style->ItemSpacing = ImVec2(12, 8);
+
+		style->WindowTitleAlign = ImVec2(0.5f, 0.5f);
+		style->IndentSpacing = 25.0f;
+
+		style->ItemInnerSpacing = ImVec2(18, 6);
+
+		style->ScrollbarSize = 0.0f;
+		style->ScrollbarRounding = 0.0f;
+
+		// Sliders
+		style->GrabMinSize = 6.0f;
+		style->GrabRounding = 0.0f;
+
+		// Modify colors for a White, Black, and Purple theme
+		style->Colors[ImGuiCol_Text] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // White text
+		style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.6f, 0.4f, 0.8f, 1.0f); // Purple-tinted disabled text
+		style->Colors[ImGuiCol_WindowBg] = ImColor(25, 25, 35, 255);  // Dark purple/black background
+		style->Colors[ImGuiCol_PopupBg] = ImVec4(0.10f, 0.08f, 0.18f, 1.00f);  // Deep purple background
+		style->Colors[ImGuiCol_Border] = ImVec4(0.5f, 0.0f, 0.5f, 0.5f); // Purple-tinted border
+		style->Colors[ImGuiCol_BorderShadow] = ImVec4(0, 0, 0, 0.3f);
+
+		style->Colors[ImGuiCol_FrameBg] = ImColor(60, 10, 90, 255);  // Deep purple frame background
+		style->Colors[ImGuiCol_FrameBgHovered] = ImColor(100, 20, 150, 255);  // Brighter purple on hover
+		style->Colors[ImGuiCol_FrameBgActive] = ImColor(140, 30, 190, 255);  // Even brighter purple when active
+
+		style->Colors[ImGuiCol_Tab] = ImColor(80, 0, 120, 255);  // Dark purple tab background
+		style->Colors[ImGuiCol_TabHovered] = ImColor(120, 20, 160, 255);  // Lighter purple on hover
+		style->Colors[ImGuiCol_TabActive] = ImColor(160, 40, 200, 255);  // Light purple when active
+
+		style->Colors[ImGuiCol_TitleBg] = ImColor(30, 10, 50, 255);  // Dark purple title bar
+		style->Colors[ImGuiCol_TitleBgCollapsed] = ImColor(20, 5, 40, 255);  // Even darker when collapsed
+		style->Colors[ImGuiCol_TitleBgActive] = ImColor(40, 15, 60, 255);  // Slightly brighter when active
+
+		style->Colors[ImGuiCol_MenuBarBg] = ImVec4(0.08f, 0.02f, 0.15f, 1.00f);  // Deep purple for menu bar
+
+
+		
+		ImGui::SetNextWindowSize({ 1000, 700 });  
+		ImGui::Begin("Free cheat made by skyr0.v3(INSERT)", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+
+
+
+		ImGui::SetCursorPos({ 8.f, 31.f });
+
+		// Aimbot Tab Button
+		if (ImGui::Button("Aimbot", { 200.f, 29.f })) 
+		{
+			maintabs = 0;
+		}
+
+		ImGui::SetCursorPos({ 248.f, 31.f }); 
+
+		// Visuals Tab Button
+		if (ImGui::Button("Visuals", { 200.f, 29.f })) 
+		{
+			maintabs = 1;
+		}
+
+		ImGui::SetCursorPos({ 488.f, 31.f }); 
+
+		// Mods Tab Button
+		if (ImGui::Button("Mods", { 200.f, 29.f })) 
+		{
+			maintabs = 2;
+		}
+
+		ImGui::SetCursorPos({ 728.f, 31.f }); 
+
+		// Misc Tab Button
+		if (ImGui::Button("Misc", { 200.f, 29.f })) 
+		{
+			maintabs = 3;
+		}
+		if (maintabs == 0) {
+			ImGui::SetCursorPos({ 13.f,85.f });
+			ImGui::Checkbox("Enable", &settings::EnableHack);
+			ImGui::SetCursorPos({ 34.f,112.f });
+			ImGui::PushItemWidth(133.000000);
+			ImGui::Text("Aimbot mode (ENTER)");
+			ImGui::SetCursorPos({ 38.f,138.f });
+			ImGui::Checkbox("Memory aim", &settings::aimbot::enable);
+			if (settings::Aimbot)
+			{
+				settings::Team_Aimbot = false;
+				settings::StickySilent = false;
+			}
+			ImGui::SetCursorPos({ 38.f,167.f });
+			ImGui::Checkbox("idek why i made this aimbot but check it out igs. (V1) (might be unsafe (!!!))", &settings::Team_Aimbot);
+			if (settings::Team_Aimbot)
+			{
+				settings::Aimbot = false;
+				settings::StickySilent = false;
+			}
+			ImGui::SetCursorPos({ 38.f,196.f });
+			ImGui::Checkbox("Silent (V2, sticky) (might be unsafe (!!!))", &settings::StickySilent);
+			if (settings::StickySilent)
+			{
+				settings::Aimbot = false;
+				settings::Team_Aimbot = false;
+			}
+			ImGui::SetCursorPos({ 12.f,224.f });
+			ImGui::Text("Aimkey:");
+			HotkeyButton(settings::aimbot::current_key, ChangeKey, keystatus);
+			ImGui::SetCursorPos({ 12.f,253.f });
+			//HotkeyButton(hotkeys::aimkey, ChangeKey, keystatus);
+			ImGui::SetCursorPos({ 34.f,307.f });
+			ImGui::PushItemWidth(140.000000);
+			ImGui::Text("Aim bone (BACKSPACE)");
+			ImGui::SetCursorPos({ 40.f,330.f });
+			ImGui::Checkbox("Head", &settings::Head);
+			if (settings::Head)
+			{
+				settings::Neck = false;
+				settings::Chest = false;
+				settings::hitbox = 98;
+			}
+			ImGui::SetCursorPos({ 40.f,359.f });
+			ImGui::Checkbox("Neck", &settings::Neck);
+			if (settings::Neck)
+			{
+				settings::Head = false;
+				settings::Chest = false;
+				settings::hitbox = 4;
+			}
+			ImGui::SetCursorPos({ 40.f,388.f });
+			ImGui::Checkbox("Toes", &settings::Chest);
+			if (settings::Chest)
+			{
+				settings::Head = false;
+				settings::Neck = false;
+				settings::hitbox = 1;
+			}
+			ImGui::SetCursorPos({ 20.f,433.f });
+			ImGui::PushItemWidth(531.000000);
+			ImGui::SliderFloat("FOV: (deg)", &settings::aimbot::fov, 50, 600);
+
+			ImGui::SetCursorPos({ 20.f,474.f });
+			ImGui::PushItemWidth(531.000000);
+			ImGui::SliderFloat("Smooth:", &settings::aimbot::smoothness, 1, 15);
+
+			ImGui::SetCursorPos({ 20.f,500.f });
+			ImGui::Checkbox("Visible Check", &settings::aimbot::visible_check);
+		}
+
+		else if (maintabs == 1)
+		{
+			ImGui::SetCursorPos({ 12.f,106.f });
+			ImGui::Checkbox("Loot", &settings::Lootesp);
+			ImGui::SetCursorPos({ 12.f,134.f });
+			ImGui::Checkbox("Chests / ammo boxes", &settings::ChestESP);
+			ImGui::SetCursorPos({ 12.f,162.f });
+			ImGui::Checkbox("Traps", &settings::traps);
+			ImGui::SetCursorPos({ 12.f,190.f });
+			ImGui::Checkbox("Radar", &settings::radar::radar);
+			ImGui::SetCursorPos({ 12.f,218.f });
+			ImGui::Checkbox("Supply drops", &settings::supplydrop);
+			ImGui::SetCursorPos({ 12.f,246.f });
+			ImGui::Checkbox("Projectiles", &settings::projectile);
+			ImGui::SetCursorPos({ 12.f,273.f });
+			ImGui::Checkbox("Vehicles", &settings::VehicleEsp);
+			ImGui::SetCursorPos({ 238.f,106.f });
+			ImGui::Checkbox("Box (F1)", &settings::Esp_Corner_Box);
+			ImGui::SetCursorPos({ 20.f,472.f });
+			ImGui::PushItemWidth(319.000000);
+			ImGui::SliderFloat("Loot", &settings::VisDist, 5, 600);
+			ImGui::SetCursorPos({ 23.f,457.f });
+			ImGui::PushItemWidth(98.000000);
+			ImGui::Text("Loot distance:");
+			ImGui::SetCursorPos({ 20.f,80.f });
+			ImGui::PushItemWidth(84.000000);
+			ImGui::Text("Environment:");
+			ImGui::SetCursorPos({ 238.f,134.f });
+			ImGui::Checkbox("Name (F2)", &settings::PlayerESP);
+			ImGui::SetCursorPos({ 238.f,162.f });
+			ImGui::Checkbox("Skeleton", &settings::Esp_skeleton);
+			ImGui::SetCursorPos({ 238.f,190.f });
+			ImGui::Checkbox("Self ESP", &settings::SelfEsp);
+			ImGui::SetCursorPos({ 238.f,218.f });
+			ImGui::Checkbox("Snaplines (F3)", &settings::visuals::line);
+			ImGui::SetCursorPos({ 238.f,246.f });
+			ImGui::Checkbox("3D box ", &settings::ThreeDBox);
+			ImGui::SetCursorPos({ 238.f,271.f });
+			ImGui::Checkbox("2D Box", &settings::Esp_box);
+			ImGui::SetCursorPos({ 18.f,297.f });
+			ImGui::PushItemWidth(189.000000);
+			ImGui::Text("Loot tier (PageUp/PageDown)");
+			ImGui::SetCursorPos({ 26.f,315.f });
+			ImGui::Checkbox("Ultra common", &settings::Ultracommon);
+			ImGui::SetCursorPos({ 26.f,340.f });
+			ImGui::Checkbox("Common", &settings::Common);
+			ImGui::SetCursorPos({ 26.f,365.f });
+			ImGui::Checkbox("Uncommon", &settings::Uncommon);
+			ImGui::SetCursorPos({ 26.f,390.f });
+			ImGui::Checkbox("Rare", &settings::Rare);
+			ImGui::SetCursorPos({ 26.f,415.f });
+			ImGui::Checkbox("Legendary", &settings::Legendary);
+			ImGui::SetCursorPos({ 240.f,80.f });
+			ImGui::PushItemWidth(35.000000);
+			ImGui::Text("Loot:");
+			ImGui::SetCursorPos({ 555.f,80.f });
+			ImGui::PushItemWidth(35.000000);
+			ImGui::Text("Misc:");
+			ImGui::SetCursorPos({ 557.f,106.f });
+			ImGui::Checkbox("Aimbot FOV", &settings::aimbot::show_fov);
+			ImGui::SetCursorPos({ 557.f,134.f });
+			ImGui::Checkbox("Aimbot indicators", &settings::visuals::targetline);
+			ImGui::SetCursorPos({ 553.f,185.f });
+			ImGui::PushItemWidth(201.000000);
+			ImGui::SliderFloat(" ", &settings::VisDist, 5, 600);
+			ImGui::SetCursorPos({ 556.f,163.f });
+			ImGui::PushItemWidth(147.000000);
+			ImGui::Text("Overall ESP Distance:");
+		}
+
+		else if (maintabs == 2)
+		{
+			ImGui::SetCursorPos({ 16.f,84.f });
+			ImGui::Checkbox("No weapon spread (F5) (might be unsafe unless its nobloom only)", &settings::Nospread);
+			if (GetAsyncKeyState(VK_F5))
+			{
+				settings::Nospread = true;
+			}
+			ImGui::SetCursorPos({ 16.f,115.f });
+			ImGui::Checkbox("No bloom only (legit nospread, only activate when you're targeting your weapon) ", &settings::Nobloom);
+			ImGui::SetCursorPos({ 16.f,146.f });
+			ImGui::Checkbox("Instant Reload", &settings::PlayerReload);
+			ImGui::SetCursorPos({ 16.f,177.f });
+			ImGui::Checkbox("Camera Fov Changer", &settings::FirstCamera);
+			ImGui::SetCursorPos({ 16.f,208.f });
+			ImGui::Checkbox("Instarevive (F7)", &settings::InstantRevive);
+			ImGui::SetCursorPos({ 16.f,239.f });
+			ImGui::Checkbox("BULLET TELEPORT (Vehicles only)", &settings::MagicBullets);
+			ImGui::SetCursorPos({ 16.f,270.f });
+			ImGui::Checkbox("BOAT TELEPORT XD", &settings::boattp);
+			ImGui::SetCursorPos({ 16.f,301.f });
+			ImGui::Checkbox("Rapid fire - works fine ONLY on SNIPERS/BURTS ARs", &settings::RapidFire);
+			ImGui::SetCursorPos({ 16.f,332.f });
+			ImGui::Checkbox("AirStuck (Server sided) (CAPS)", &settings::Airstuck);
+			ImGui::SetCursorPos({ 16.f,363.f });
+			ImGui::Checkbox("Aim While Jumping", &settings::AimWhileJumping);
+			ImGui::SetCursorPos({ 16.f,394.f });
+			ImGui::Checkbox("Crosshair (Best ud exploit 2022 xd)", &settings::Features::crosshair);
+			ImGui::SetCursorPos({ 16.f,425.f });
+			ImGui::Checkbox("Vehicle Fly (Might Work) (SHIFT)", &settings::VehicleFly);
+		}
+
+		else if (maintabs == 3)
+		{
+			ImGui::SetCursorPos({ 46.f,111.f });
+			ImGui::Text("nigger dont look here or idc actually.\n");
+			ImGui::SetCursorPos({ 47.f,142.f });
+			ImGui::Text("SaveConfig:");
+			ImGui::SetCursorPos({ 45.f,171.f });
+			/*if (ImGui::Button(XorStr("Save Config").c_str(), { 90.f,20.f }))
+			{
+				Sleep(500); SaveConfig();
+			}*/
+		}
+		ImGui::End();
+	}
+}
+
+HWND get_process_wnd(uint32_t pid)
+{
+	std::pair<HWND, uint32_t> params = { 0, pid };
+	BOOL bresult = EnumWindows([](HWND hwnd, LPARAM lparam) -> BOOL
+	{
+		auto pparams = (std::pair<HWND, uint32_t>*)(lparam);
+		uint32_t processid = 0;
+		if (GetWindowThreadProcessId(hwnd, reinterpret_cast<LPDWORD>(&processid)) && processid == pparams->second)
+		{
+			SetLastError((uint32_t)-1);
+			pparams->first = hwnd;
+			return FALSE;
+		}
+		return TRUE;
+	}, (LPARAM)&params);
+	if (!bresult && GetLastError() == -1 && params.first) return params.first;
+	return 0;
+}
+
+WPARAM render_loop()
+{
+	static RECT old_rc;
+	ZeroMemory(&messager, sizeof(MSG));
+	while (messager.message != WM_QUIT)
+	{
+		if (PeekMessage(&messager, my_wnd, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&messager);
+			DispatchMessage(&messager);
+		}
+		if (game_wnd == NULL) exit(0);
+		HWND active_wnd = GetForegroundWindow();
+		//if (active_wnd == game_wnd)
+		//{
+		//	HWND target_wnd = GetWindow(active_wnd, GW_HWNDPREV);
+		//	SetWindowPos(my_wnd, target_wnd, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	//	}
+	//	else
+	//	{
+	//		game_wnd = get_process_wnd(handler::process_id);
+		//	Sleep(250);
+	//	}
+		RECT rc;
+		POINT xy;
+		ZeroMemory(&rc, sizeof(RECT));
+		ZeroMemory(&xy, sizeof(POINT));
+		rc.left = xy.x;
+		rc.top = xy.y;
+		ImGuiIO& io = ImGui::GetIO();
+		io.DeltaTime = 1.0f / 60.0f;
+		POINT p;
+		GetCursorPos(&p);
+		io.MousePos.x = p.x - xy.x;
+		io.MousePos.y = p.y - xy.y;
+		if (GetAsyncKeyState(0x1))
+		{
+			io.MouseDown[0] = true;
+			io.MouseClicked[0] = true;
+			io.MouseClickedPos[0].x = io.MousePos.x;
+			io.MouseClickedPos[0].x = io.MousePos.y;
+		}
+		else
+		{
+			io.MouseDown[0] = false;
+		}
+		if (rc.left != old_rc.left || rc.right != old_rc.right || rc.top != old_rc.top || rc.bottom != old_rc.bottom)
+		{
+			old_rc = rc;
+			settings::width = rc.right;
+			settings::height = rc.bottom;
+			p_params.BackBufferWidth = settings::width;
+			p_params.BackBufferHeight = settings::height;
+			SetWindowPos(my_wnd, (HWND)0, xy.x, xy.y, settings::width, settings::height, SWP_NOREDRAW);
+			p_device->Reset(&p_params);
+		}
+		ImGui_ImplDX9_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+		game_loop();
+		render_menu();
+		ImGui::EndFrame();
+		p_device->SetRenderState(D3DRS_ZENABLE, false);
+		p_device->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+		p_device->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+		p_device->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
+		if (p_device->BeginScene() >= 0)
+		{
+			ImGui::Render();
+			ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+			p_device->EndScene();
+		}
+		HRESULT result = p_device->Present(0, 0, 0, 0);
+		if (result == D3DERR_DEVICELOST && p_device->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+		{
+			ImGui_ImplDX9_InvalidateDeviceObjects();
+			p_device->Reset(&p_params);
+			ImGui_ImplDX9_CreateDeviceObjects();
+		}
+	}
+
+	ImGui_ImplDX9_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
+	if (p_device != 0)
+	{
+		p_device->EndScene();
+		p_device->Release();
+	}
+	if (p_object != 0) p_object->Release();
+	DestroyWindow(my_wnd);
+	return messager.wParam;
+}
